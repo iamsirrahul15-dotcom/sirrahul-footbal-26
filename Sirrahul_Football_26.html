@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>El Clásico: Sirrahul Football</title>
+<style>
+body{margin:0;background:#111;color:white;font-family:Arial;text-align:center;touch-action:none}
+h2{margin:8px}.wrap{max-width:900px;margin:auto}
+canvas{width:100%;max-width:900px;background:#2f8f3b;border:3px solid white;border-radius:8px}
+.controls{display:flex;justify-content:space-between;max-width:700px;margin:10px auto}
+.pad,.actions{display:grid;gap:8px}.pad{grid-template-columns:60px 60px 60px;grid-template-rows:55px 55px}
+button{font-size:18px;font-weight:bold;border-radius:12px;border:0;padding:12px;background:#eee}
+#shoot{background:#ffcc00} #pass{background:#55aaff;color:white}
+#msg{min-height:28px;font-weight:bold}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h2>⚽ EL CLÁSICO — SIRRAHUL FOOTBALL 26 ⚽</h2>
+<div><b>REAL MADRID (YOU)</b> <span id="score">0 - 0</span> <b>FC BARCELONA (AI)</b> | ⏱️ <span id="time">90</span></div>
+<canvas id="game" width="900" height="500"></canvas>
+<div id="msg">Control Ronaldo and score!</div>
+<div class="controls">
+<div class="pad">
+<span></span><button data-k="ArrowUp">▲</button><span></span>
+<button data-k="ArrowLeft">◀</button><button data-k="ArrowDown">▼</button><button data-k="ArrowRight">▶</button>
+</div>
+<div class="actions"><button id="pass">PASS</button><button id="shoot">SHOOT ⚡</button></div>
+</div>
+<p>Keyboard: Arrow keys / WASD + Space to shoot</p>
+</div>
+<script>
+const c=document.getElementById('game'),x=c.getContext('2d');
+let p={x:220,y:250,vx:0,vy:0}, ball={x:270,y:250,vx:0,vy:0};
+let keys={}, scoreA=0,scoreB=0,t=90,over=false;
+const defenders=[{x:500,y:150},{x:560,y:350},{x:700,y:250}];
+function reset(side=0){p.x=220;p.y=250;ball.x=270;ball.y=250;ball.vx=ball.vy=0;if(side){ball.x=650;ball.y=250}}
+function drawField(){
+ x.fillStyle='#27833a';x.fillRect(0,0,900,500);
+ x.strokeStyle='white';x.lineWidth=4;x.strokeRect(20,20,860,460);
+ x.beginPath();x.moveTo(450,20);x.lineTo(450,480);x.stroke();
+ x.beginPath();x.arc(450,250,70,0,Math.PI*2);x.stroke();
+ x.strokeRect(20,170,100,160);x.strokeRect(780,170,100,160);
+}
+function player(o,label,color){
+ x.fillStyle=color;x.beginPath();x.arc(o.x,o.y,18,0,Math.PI*2);x.fill();
+ x.fillStyle='white';x.font='bold 14px Arial';x.textAlign='center';x.fillText(label,o.x,o.y-28);
+}
+function goalCheck(){
+ if(ball.x>880 && ball.y>185 && ball.y<315){scoreA++;document.getElementById('msg').textContent='GOOOOAL! RONALDO SCORES! SIUUUU! 🔥';reset();updateScore()}
+ if(ball.x<20 && ball.y>185 && ball.y<315){scoreB++;document.getElementById('msg').textContent='Barcelona score! Messi celebrates!';reset(1);updateScore()}
+}
+function updateScore(){document.getElementById('score').textContent=scoreA+' - '+scoreB}
+function shoot(){
+ let dx=880-ball.x,dy=250-ball.y,d=Math.hypot(dx,dy)||1;
+ ball.vx=dx/d*10;ball.vy=dy/d*10;document.getElementById('msg').textContent='RONALDO SHOOTS! 💥';
+}
+function pass(){ball.vx=6;ball.vy=(Math.random()-.5)*4;document.getElementById('msg').textContent='Nice pass! Attack continues.'}
+function loop(){
+ if(!over){
+ let sp=4;
+ if(keys.ArrowLeft||keys.a)p.x-=sp;if(keys.ArrowRight||keys.d)p.x+=sp;
+ if(keys.ArrowUp||keys.w)p.y-=sp;if(keys.ArrowDown||keys.s)p.y+=sp;
+ p.x=Math.max(40,Math.min(860,p.x));p.y=Math.max(40,Math.min(460,p.y));
+ let dx=ball.x-p.x,dy=ball.y-p.y,d=Math.hypot(dx,dy);
+ if(d<55){ball.vx+=dx/d*.7;ball.vy+=dy/d*.7}
+ // Barcelona AI defenders
+ defenders.forEach((q,i)=>{let dx=ball.x-q.x,dy=ball.y-q.y,d=Math.hypot(dx,dy)||1;q.x+=dx/d*(1.2+i*.1);q.y+=dy/d*(1.2+i*.1);
+ if(Math.hypot(ball.x-q.x,ball.y-q.y)<25){ball.vx=-4-Math.random()*3;ball.vy=(Math.random()-.5)*5}})
+ ball.x+=ball.vx;ball.y+=ball.vy;ball.vx*=.97;ball.vy*=.97;
+ if(ball.y<25||ball.y>475)ball.vy*=-.8;
+ goalCheck();
+ t-=1/60;document.getElementById('time').textContent=Math.ceil(t);
+ if(t<=0){over=true;document.getElementById('msg').textContent='FULL TIME! '+(scoreA>scoreB?'REAL MADRID WINS! 🏆':scoreB>scoreA?'BARCELONA WINS! 🏆':'DRAW!');}
+ }
+ drawField();defenders.forEach((q,i)=>player(q,['MESSI','XAVI','PUYOL'][i],'#1746a2'));
+ player(p,'RONALDO','#f5f5f5');
+ x.fillStyle='orange';x.beginPath();x.arc(ball.x,ball.y,10,0,Math.PI*2);x.fill();
+ requestAnimationFrame(loop);
+}
+document.addEventListener('keydown',e=>{keys[e.key]=true;if(e.code==='Space')shoot()});
+document.addEventListener('keyup',e=>keys[e.key]=false);
+document.querySelectorAll('[data-k]').forEach(b=>{
+ let k=b.dataset.k;b.addEventListener('pointerdown',()=>keys[k]=true);b.addEventListener('pointerup',()=>keys[k]=false);b.addEventListener('pointerleave',()=>keys[k]=false);
+});
+document.getElementById('shoot').onclick=shoot;document.getElementById('pass').onclick=pass;
+loop();
+</script></body></html>
